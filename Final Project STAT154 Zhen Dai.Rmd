@@ -1,0 +1,40 @@
+---
+title: "Final Project"
+author: "Zhen Dai"
+date: "April 23, 2017"
+output: html_document
+---
+
+```{r}
+setwd("C:/Users/meteorite619/Downloads")
+data = read.csv("yelp_academic_dataset_review_train.csv")
+checkin = read.csv("yelp_academic_dataset_checkin.csv")
+star = data$stars
+comment = data$text
+user = read.csv("yelp_academic_dataset_user.csv")
+business = read.csv("yelp_academic_dataset_business_train.csv")
+testReview = read.csv("yelp_academic_dataset_review_test.csv")
+
+
+install.packages("TD-IDF")
+install.packages("tm")
+library(tm)
+library(NLP)
+library(slam)
+
+clean = function(corpus){
+  text = tm_map(corpus,content_transformer(tolower))
+  text = tm_map(text, removeNumbers)
+  text = tm_map(text, removePunctuation)
+  text = tm_map(text, removeWords, c("the", "and", stopwords("english")))
+  text = tm_map(text, stripWhitespace)
+}
+
+comment = Corpus(VectorSource(comment))
+clean_review = clean(comment)
+review_dtm = DocumentTermMatrix(clean_review)
+review_dtm = removeSparseTerms(review_dtm, 0.99)
+
+
+```
+
