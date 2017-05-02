@@ -15,18 +15,35 @@ user = read.csv("yelp_academic_dataset_user.csv")
 business = read.csv("yelp_academic_dataset_business_train.csv")
 testReview = read.csv("yelp_academic_dataset_review_test.csv")
 
-
+#Text Mining
 install.packages("TD-IDF")
 install.packages("tm")
 library(tm)
 library(NLP)
 library(slam)
 
+food = readLines("http://www.enchantedlearning.com/wordlist/food.shtml")
+getWord = function(x){
+  rrr = x[grep("<BR>",x)]
+  rrrr = strsplit(rrr, split = "<BR>")
+  s = sapply(rrrr, function(x) length(x)==1)
+  rrrrr = rrrr[s]
+  e = as.character(rrrrr)
+  ee = e[-grep("<", e)]
+  eee = ee[ee!=""]
+  return(eee)
+}
+foodWord = getWord(food)
+delete1 = c("starbucks","two", "see", "seen", "garlic", "else.", "isnt","pizza", "tables",
+"pepperoni", "pizzas", "werent", "oven", "strip","rice","veggies","noddles",
+"sausage", "thats", "vegas", "tomato", "vegetables", "pie", "crab", "fries",
+"latte", "espresso", "chipotle", "sandwich", "goes")
 clean = function(corpus){
   text = tm_map(corpus,content_transformer(tolower))
   text = tm_map(text, removeNumbers)
   text = tm_map(text, removePunctuation)
-  text = tm_map(text, removeWords, c("the", "and", stopwords("english")))
+  text = tm_map(text, removeWords, c(foodWord, delete1, "taking", "sat", "also",
+                                     "just", "the", "and", stopwords("english")))
   text = tm_map(text, stripWhitespace)
 }
 
@@ -35,6 +52,17 @@ clean_review = clean(comment)
 review_dtm = DocumentTermMatrix(clean_review)
 review_dtm = removeSparseTerms(review_dtm, 0.99)
 
+#Regression
+X_train = as.matrix(review_dtm)
+Y_train = star
+
+#Least Square
+
+#SVM
+Y_train2 = as.factor(Y_train)
+install.packages("e1071")
+library(e1071)
+SVM_model = svm(Y_train2 ~ X_train)
 
 ```
 
