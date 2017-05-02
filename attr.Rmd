@@ -1,0 +1,297 @@
+---
+title: ""
+author: ""
+date: ""
+output: 
+  pdf_document:
+    fig_height: 3
+    fig_width: 5
+  html_document:
+    fig_height: 3
+    fig_width: 5
+  word_document:
+    fig_height: 3
+    fig_width: 5
+---
+
+```{r, setup, include=FALSE}
+require(mosaic)   # Load additional packages here 
+library(stringr)
+library(xlsx)
+# Some customization.  You can alter or delete as desired (if you know what you are doing).
+trellis.par.set(theme=theme.mosaic()) # change default color scheme for lattice
+knitr::opts_chunk$set(
+  tidy=FALSE,     # display code as typed
+  size="small")   # slightly smaller font for code
+```
+
+```{r}
+business.train <- read.csv("/Users/zhangxinyun/Desktop/Stat 154/Final Project/yelp_academic_dataset_business_train.csv")
+business.test <- read.csv("/Users/zhangxinyun/Desktop/Stat 154/Final Project/yelp_academic_dataset_business_test.csv")
+
+attributes <- data.frame(business.train[,7])
+att.list <- list()
+for (i in 1:nrow(attributes)) {
+  att.list[[i]] = str_extract_all(attributes[i,], "[A-Z0-9a-z_-]+", simplify = T)
+}
+
+att <- plyr::ldply(att.list, rbind)
+att.x <- cbind(business.train[,1], att)
+
+att.train <- read.csv("/Users/zhangxinyun/Desktop/Stat 154/Final Project/att.train.old.csv")
+col.name <-colnames(att.train)[-1]
+test.colname <- c("Number",col.name)
+
+attributes.test <- data.frame(business.test[,8])
+att.test.list <- list()
+for (i in 1:nrow(attributes.test)) {
+  att.test.list[[i]] = str_extract_all(attributes.test[i,], "[A-Z0-9a-z_-]+", simplify = T)
+}
+
+att.test <- plyr::ldply(att.test.list, rbind)
+att.test.x <- cbind(business.test[,c(1,2)], att.test)
+dim(att.test.x)
+test.df <- data.frame(matrix(NA, nrow=440, ncol=53))
+names(test.df) <- test.colname
+test.df[,1] = att.test.x[,1]
+
+for (i in 1:nrow(att.test.x)) {
+  for (j in 1:ncol(att.test.x)) {
+    if (!is.na(att.test.x[i,j])) {
+      if (as.character(att.test.x[i,j]) == as.character("Alcohol")) {
+        test.df[i,2] = as.character(att.test.x[i,j+1])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("Ambience")) {
+        test.df[i,c(3)] = as.character(att.test.x[i,c(j+2)])
+        test.df[i,c(4)] = as.character(att.test.x[i,c(j+4)])
+        test.df[i,c(5)] = as.character(att.test.x[i,c(j+6)])
+        test.df[i,c(6)] = as.character(att.test.x[i,c(j+8)])
+        test.df[i,c(7)] = as.character(att.test.x[i,c(j+10)])
+        test.df[i,c(8)] = as.character(att.test.x[i,c(j+12)])
+        test.df[i,c(9)] = as.character(att.test.x[i,c(j+14)])
+        test.df[i,c(10)] = as.character(att.test.x[i,c(j+16)])
+        test.df[i,c(11)] = as.character(att.test.x[i,c(j+18)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("BYOB")) {
+        test.df[i,c(12)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("BYOBCorkage")) {
+        test.df[i,c(13)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("BikeParking")) {
+        test.df[i,c(14)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("BusinessAcceptsBitcoin")) {
+        test.df[i,c(15)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("BusinessAcceptsCreditCards")) {
+        test.df[i,c(16)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("BusinessParking")) {
+        test.df[i,c(17)] = as.character(att.test.x[i,c(j+2)])
+        test.df[i,c(18)] = as.character(att.test.x[i,c(j+4)])
+        test.df[i,c(19)] = as.character(att.test.x[i,c(j+6)])
+        test.df[i,c(20)] = as.character(att.test.x[i,c(j+8)])
+        test.df[i,c(21)] = as.character(att.test.x[i,c(j+10)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("ByAppointmentOnly")) {
+        test.df[i,c(22)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("Caters")) {
+        test.df[i,c(23)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("Corkage")) {
+        test.df[i,c(24)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("DogsAllowed")) {
+        test.df[i,c(25)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("GoodForKids")) {
+        test.df[i,c(26)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("GoodForMeal")) {
+        test.df[i,c(27)] = as.character(att.test.x[i,c(j+2)])
+        test.df[i,c(28)] = as.character(att.test.x[i,c(j+4)])
+        test.df[i,c(29)] = as.character(att.test.x[i,c(j+6)])
+        test.df[i,c(30)] = as.character(att.test.x[i,c(j+8)])
+        test.df[i,c(31)] = as.character(att.test.x[i,c(j+10)])
+        test.df[i,c(32)] = as.character(att.test.x[i,c(j+12)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("HasTV")) {
+        test.df[i,c(33)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("NoiseLevel")) {
+        test.df[i,c(34)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("Open24Hours")) {
+        test.df[i,c(35)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("OutdoorSeating")) {
+        test.df[i,c(36)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("RestaurantsAttire")) {
+        test.df[i,c(37)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("RestaurantsCounterService")) {
+        test.df[i,c(38)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("RestaurantsDelivery")) {
+        test.df[i,c(39)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("RestaurantsGoodForGroups")) {
+        test.df[i,c(40)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("RestaurantsPriceRange2")) {
+        test.df[i,c(41)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("RestaurantsReservations")) {
+        test.df[i,c(42)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("RestaurantsTableService")) {
+        test.df[i,c(43)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("RestaurantsTakeOut")) {
+        test.df[i,c(44)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("WheelchairAccessible")) {
+        test.df[i,c(45)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("WiFi")) {
+        test.df[i,c(46)] = as.character(att.test.x[i,c(j+1)])
+      }
+      if (as.character(att.test.x[i,j]) == as.character("DietaryRestrictions")) {
+        test.df[i,c(47)] = as.character(att.test.x[i,c(j+2)])
+        test.df[i,c(48)] = as.character(att.test.x[i,c(j+4)])
+        test.df[i,c(49)] = as.character(att.test.x[i,c(j+6)])
+        test.df[i,c(50)] = as.character(att.test.x[i,c(j+8)])
+        test.df[i,c(51)] = as.character(att.test.x[i,c(j+10)])
+        test.df[i,c(52)] = as.character(att.test.x[i,c(j+12)])
+        test.df[i,c(53)] = as.character(att.test.x[i,c(j+14)])
+      }
+    }
+  }
+}
+write.csv(test.df, "att.test.csv", row.names=FALSE)
+
+train.df <- data.frame(matrix(NA, nrow=2510, ncol=53))
+names(train.df) <- colnames(att.train)
+train.df[,1] = att.x[,1]
+for (i in 1:nrow(att.x)) {
+  for (j in 1:ncol(att.x)) {
+    if (!is.na(att.x[i,j])) {
+      if (as.character(att.x[i,j]) == as.character("Alcohol")) {
+        train.df[i,2] = as.character(att.x[i,j+1])
+      }
+      if (as.character(att.x[i,j]) == as.character("Ambience")) {
+        train.df[i,c(3)] = as.character(att.x[i,c(j+2)])
+        train.df[i,c(4)] = as.character(att.x[i,c(j+4)])
+        train.df[i,c(5)] = as.character(att.x[i,c(j+6)])
+        train.df[i,c(6)] = as.character(att.x[i,c(j+8)])
+        train.df[i,c(7)] = as.character(att.x[i,c(j+10)])
+        train.df[i,c(8)] = as.character(att.x[i,c(j+12)])
+        train.df[i,c(9)] = as.character(att.x[i,c(j+14)])
+        train.df[i,c(10)] = as.character(att.x[i,c(j+16)])
+        train.df[i,c(11)] = as.character(att.x[i,c(j+18)])
+      }
+      if (as.character(att.x[i,j]) == as.character("BYOB")) {
+        train.df[i,c(12)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("BYOBCorkage")) {
+        train.df[i,c(13)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("BikeParking")) {
+        train.df[i,c(14)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("BusinessAcceptsBitcoin")) {
+        train.df[i,c(15)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("BusinessAcceptsCreditCards")) {
+        train.df[i,c(16)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("BusinessParking")) {
+        train.df[i,c(17)] = as.character(att.x[i,c(j+2)])
+        train.df[i,c(18)] = as.character(att.x[i,c(j+4)])
+        train.df[i,c(19)] = as.character(att.x[i,c(j+6)])
+        train.df[i,c(20)] = as.character(att.x[i,c(j+8)])
+        train.df[i,c(21)] = as.character(att.x[i,c(j+10)])
+      }
+      if (as.character(att.x[i,j]) == as.character("ByAppointmentOnly")) {
+        train.df[i,c(22)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("Caters")) {
+        train.df[i,c(23)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("Corkage")) {
+        train.df[i,c(24)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("DogsAllowed")) {
+        train.df[i,c(25)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("GoodForKids")) {
+        train.df[i,c(26)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("GoodForMeal")) {
+        train.df[i,c(27)] = as.character(att.x[i,c(j+2)])
+        train.df[i,c(28)] = as.character(att.x[i,c(j+4)])
+        train.df[i,c(29)] = as.character(att.x[i,c(j+6)])
+        train.df[i,c(30)] = as.character(att.x[i,c(j+8)])
+        train.df[i,c(31)] = as.character(att.x[i,c(j+10)])
+        train.df[i,c(32)] = as.character(att.x[i,c(j+12)])
+      }
+      if (as.character(att.x[i,j]) == as.character("HasTV")) {
+        train.df[i,c(33)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("NoiseLevel")) {
+        train.df[i,c(34)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("Open24Hours")) {
+        train.df[i,c(35)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("OutdoorSeating")) {
+        train.df[i,c(36)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("RestaurantsAttire")) {
+        train.df[i,c(37)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("RestaurantsCounterService")) {
+        train.df[i,c(38)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("RestaurantsDelivery")) {
+        train.df[i,c(39)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("RestaurantsGoodForGroups")) {
+        train.df[i,c(40)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("RestaurantsPriceRange2")) {
+        train.df[i,c(41)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("RestaurantsReservations")) {
+        train.df[i,c(42)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("RestaurantsTableService")) {
+        train.df[i,c(43)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("RestaurantsTakeOut")) {
+        train.df[i,c(44)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("WheelchairAccessible")) {
+        train.df[i,c(45)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("WiFi")) {
+        train.df[i,c(46)] = as.character(att.x[i,c(j+1)])
+      }
+      if (as.character(att.x[i,j]) == as.character("DietaryRestrictions")) {
+        train.df[i,c(47)] = as.character(att.x[i,c(j+2)])
+        train.df[i,c(48)] = as.character(att.x[i,c(j+4)])
+        train.df[i,c(49)] = as.character(att.x[i,c(j+6)])
+        train.df[i,c(50)] = as.character(att.x[i,c(j+8)])
+        train.df[i,c(51)] = as.character(att.x[i,c(j+10)])
+        train.df[i,c(52)] = as.character(att.x[i,c(j+12)])
+        train.df[i,c(53)] = as.character(att.x[i,c(j+14)])
+      }
+    }
+  }
+}
+write.csv(train.df, "att.train.csv", row.names=FALSE)
+```
+
