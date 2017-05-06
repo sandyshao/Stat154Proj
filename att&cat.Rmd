@@ -1,0 +1,83 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+plot(cars)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file).
+```{r}
+setwd("/Users/zhangxinyun/Desktop/Stat 154/Final Project/Train.full.prediction")
+rf.train.pred <- read.csv("rf_cv_train_out.csv", header = F)
+setwd("/Users/zhangxinyun/Desktop/Stat 154/Final Project")
+rev.train <- read.csv("yelp_academic_dataset_review_train.csv")
+rev.test <- read.csv("yelp_academic_dataset_review_test.csv")
+bus.train <- read.csv("yelp_academic_dataset_business_train.csv")
+rf.test <- read.csv("rf_test_out.csv", header = F)
+setwd("/Users/zhangxinyun/Desktop/Stat 154/Final Project/Numeric att")
+att.cat.train <- read.csv("att.cat.train.csv")
+
+rev.train.rf <- rev.train %>%
+  mutate(star = rf.train.pred[,1]) %>%
+  group_by(business_id) %>%
+  summarise(mean.star = round(mean(star), digits = 1))
+
+rev.train.rf.star <- rev.train.rf[rev.train.rf$business_id %in% bus.train$business_id,]
+rf.train.star.ready <- rev.train.rf.star[match(bus.train$business_id, rev.train.rf.star$business_id),]
+
+star.att.cat.train <- cbind(rf.train.star.ready, att.cat.train)[,-c(1,3)]
+att.cat.train.final <- cbind(bus.train$stars, star.att.cat.train)
+
+
+write.csv(att.cat.train.final, "rf.withNA.csv", row.names = F)
+
+
+cc <- complete.cases(att.cat.train.final)
+
+
+
+library(glmnet)
+lasso.fit <- cv.glmnet(as.matrix(att.cat.train.final[cc,2:38]), 
+                       as.matrix(att.cat.train.final[cc,1]))
+
+coef.rf.lasso <- coef(lasso.fit)
+
+rf.lasso.test <- rev.test %>%
+  mutate(star = rf.test[,1]) %>%
+  group_by(business_id) %>%
+  summarise(mean.star = round(mean(star), digits = 1))
+
+bus.test <- read.csv("yelp_academic_dataset_business_test.csv")
+
+rf.lasso.test.star <- rf.lasso.test[rf.lasso.test$business_id %in% bus.test$business_id,]
+rf.lasso.star.ready <- rf.lasso.test.star[match(bus.test$business_id, rf.lasso.test.star$business_id),]
+
+rf.lasso.predicted = round(coef.rf.lasso[1] + coef.rf.lasso[2] * rf.lasso.star.ready[,2], digits = 1)
+
+rf.lasso <- cbind(c(0:439), rf.lasso.predicted)
+write.csv(rf.lasso, "rf.lasso.csv", row.names=FALSE)
+
+
+# rf + LASSO (without attribute)
+library(kernlab)
+att.cat.train.final.1 <- att.cat.train.final[,c(1,2,33:38)]
+cc <- complete.cases(att.cat.train.final.1)
+svm.fit <- ksvm(as.matrix(att.cat.train.final.1[cc,2:8]), 
+                       as.matrix(att.cat.train.final[cc,1]), kernel='rbf',C=1)
+
+att.cat.test <- as.matrix(read.csv("att.cat.test.csv"))
+pred <- cbind(as.matrix(rf.lasso.star.ready[,2]), att.cat.test[,32:37])
+ypred <- predict(svm.fit,pred)
+rf.svm <- data.frame(round(ypred, digits = 1))
+
+write.csv(rf.svm, "rf.svm.csv", row.names=FALSE)
+```
+
