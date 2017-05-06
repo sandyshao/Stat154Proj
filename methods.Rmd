@@ -1,0 +1,213 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+plot(cars)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file).
+```{r}
+library(kernlab)
+library(dplyr)
+library(glmnet)
+library(randomForest)
+```
+
+```{r}
+setwd("/Users/zhangxinyun/Desktop/Stat 154/Final Project/Train.full.prediction")
+rf.train.pred <- read.csv("rf_cv_train_out.csv", header = F)
+ridge.train.pred <- read.csv("ridge_cv_train_out.csv", header = F)
+lasso.train.pred <- read.csv("lasso_cv_train_out.csv", header = F)
+
+setwd("/Users/zhangxinyun/Desktop/Stat 154/Final Project/Test.full.prediction")
+lasso.test.pred <- read.csv("lasso_test_out.csv", header = F)
+rf.test.pred <- read.csv("rf_test_out.csv", header = F)
+ridge.test.pred <- read.csv("ridge_test_out.csv", header = F)
+svm.test.pred <- read.csv("svm_test_out.csv", header = F)
+
+setwd("/Users/zhangxinyun/Desktop/Stat 154/Final Project")
+rev.train <- read.csv("yelp_academic_dataset_review_train.csv")
+rev.test <- read.csv("yelp_academic_dataset_review_test.csv")
+bus.train <- read.csv("yelp_academic_dataset_business_train.csv")
+bus.test <- read.csv("yelp_academic_dataset_business_test.csv")
+
+setwd("/Users/zhangxinyun/Desktop/Stat 154/Final Project/Numeric att")
+att.cat.train <- read.csv("att.cat.train.csv")
+att.cat.test <- read.csv("att.cat.test.csv")
+
+
+# random forest for review train matrix
+rev.train.rf <- rev.train %>%
+  mutate(star = rf.train.pred[,1]) %>%
+  group_by(business_id) %>%
+  summarise(mean.star = round(mean(star), digits = 1))
+
+rev.train.rf.star <- rev.train.rf[rev.train.rf$business_id %in% bus.train$business_id,]
+rf.train.star.ready <- rev.train.rf.star[match(bus.train$business_id, rev.train.rf.star$business_id),]
+
+star.att.cat.train <- cbind(rf.train.star.ready, att.cat.train)[,-c(1,3)]
+att.cat.train.final <- cbind(bus.train$stars, star.att.cat.train)
+# remove rows with NA
+cc <- complete.cases(att.cat.train.final)
+# LASSO for predicted mean stars and att, cat
+lasso.fit <- cv.glmnet(as.matrix(att.cat.train.final[cc,2:38]), 
+                       as.matrix(att.cat.train.final[cc,1]))
+
+coef.rf.lasso <- coef(lasso.fit)
+
+rf.lasso.test <- rev.test %>%
+  mutate(star = rf.test[,1]) %>%
+  group_by(business_id) %>%
+  summarise(mean.star = round(mean(star), digits = 1))
+
+rf.lasso.test.star <- rf.lasso.test[rf.lasso.test$business_id %in% bus.test$business_id,]
+rf.lasso.star.ready <- rf.lasso.test.star[match(bus.test$business_id, rf.lasso.test.star$business_id),]
+
+rf.lasso.predicted = round(coef.rf.lasso[1] + coef.rf.lasso[2] * rf.lasso.star.ready[,2], digits = 1)
+
+rf.lasso <- cbind(c(0:439), rf.lasso.predicted)
+write.csv(rf.lasso, "rf.lasso.csv", row.names=FALSE)
+rf.lasso.5 <- cbind(c(0:439), round(rf.lasso.predicted/0.5)*0.5)
+write.csv(rf.lasso.5, "rf.lasso.5.csv", row.names=FALSE)
+
+
+# random forest for review train matrix
+rev.train.rf <- rev.train %>%
+  mutate(star = rf.train.pred[,1]) %>%
+  group_by(business_id) %>%
+  summarise(mean.star = mean(star))
+
+rev.train.rf.star <- rev.train.rf[rev.train.rf$business_id %in% bus.train$business_id,]
+rf.train.star.ready <- rev.train.rf.star[match(bus.train$business_id, rev.train.rf.star$business_id),]
+
+star.att.cat.train <- cbind(rf.train.star.ready, att.cat.train)[,-c(1,3)]
+att.cat.train.final <- cbind(bus.train$stars, star.att.cat.train)
+# remove rows with NA
+cc <- complete.cases(att.cat.train.final)
+# LASSO for predicted mean stars and att, cat
+lasso.fit <- cv.glmnet(as.matrix(att.cat.train.final[cc,2:38]), 
+                       as.matrix(att.cat.train.final[cc,1]))
+
+coef.rf.lasso <- coef(lasso.fit)
+
+rf.lasso.test <- rev.test %>%
+  mutate(star = rf.test[,1]) %>%
+  group_by(business_id) %>%
+  summarise(mean.star = mean(star))
+
+rf.lasso.test.star <- rf.lasso.test[rf.lasso.test$business_id %in% bus.test$business_id,]
+rf.lasso.star.ready <- rf.lasso.test.star[match(bus.test$business_id, rf.lasso.test.star$business_id),]
+
+rf.lasso.predicted = coef.rf.lasso[1] + coef.rf.lasso[2] * rf.lasso.star.ready[,2]
+
+rf.lasso <- data.frame(cbind(bus.test$business_id, round(rf.lasso.predicted/0.5)*0.5))
+write.csv(rf.lasso, "rf.lasso.laterround.csv", row.names=FALSE)
+
+
+# rf + kernel (without attribute)
+library(kernlab)
+att.cat.train.final.1 <- att.cat.train.final[,c(1,2,33:38)]
+cc <- complete.cases(att.cat.train.final.1)
+svm.fit <- ksvm(as.matrix(att.cat.train.final.1[cc,2:8]), 
+                       as.matrix(att.cat.train.final[cc,1]), kernel='rbf',C=1)
+
+pred <- cbind(as.matrix(rf.lasso.star.ready[,2]), att.cat.test[,32:37])
+ypred <- predict(svm.fit,pred)
+rf.svm <- data.frame(round(ypred, digits = 1))
+
+write.csv(rf.svm, "rf.svm.csv", row.names=FALSE)
+```
+
+```{r}
+# ridge rf att cat
+train.pred <- cbind(ridge.train.pred, rf.train.pred)
+colnames(train.pred) = c("ridge", "rf")
+mean.pred <- train.pred %>%
+  group_by(rev.train$business_id) %>%
+  summarise(star.ridge = round(mean(ridge), digits = 1),
+            star.rf = round(mean(rf), digits = 1))
+colnames(mean.pred) = c("business_id", "star.ridge", "star.rf")
+
+mean.pred.id <- mean.pred[mean.pred$business_id %in% bus.train$business_id,]
+mean.pred.star <- mean.pred.id[match(bus.train$business_id, mean.pred.id$business_id),]
+
+rrac.matrix <- cbind(mean.pred.star[,-1], att.cat.train[,32:37])
+
+test.pred <- cbind(ridge.test.pred, rf.test.pred)
+colnames(test.pred) = c("ridge", "rf")
+mean.pred.test <- test.pred %>%
+  group_by(rev.test$business_id) %>%
+  summarise(star.ridge = round(mean(ridge), digits = 1),
+            star.rf = round(mean(rf), digits = 1))
+colnames(mean.pred.test) = c("business_id", "star.ridge", "star.rf")
+
+mean.pred.id.test <- mean.pred.test[mean.pred.test$business_id %in% bus.test$business_id,]
+mean.pred.star.test <- mean.pred.id.test[match(bus.test$business_id, mean.pred.id.test$business_id),]
+pred <- cbind(mean.pred.id.test[,-1], att.cat.test[,32:37])
+cc.pred <- complete.cases(pred)
+# svm
+star.rrac.mat <- cbind(bus.train$stars, rrac.matrix)
+cc <- complete.cases(star.rrac.mat)
+svm.fit.rrac <- ksvm(as.matrix(star.rrac.mat[cc,2:9]), 
+                       as.matrix(star.rrac.mat[cc,1]), kernel='rbf',C=1, scale=F)
+
+ypred <- predict(svm.fit.rrac,pred[cc.pred,])
+rfridge.svm <- data.frame(round(ypred, digits = 1))
+
+write.csv(rfridge.svm, "rfridge.svm.1.csv", row.names=FALSE)
+
+
+# matrix(lasso ridge rf att cat) + methods
+lrrac.train.pred <- cbind(lasso.train.pred, ridge.train.pred, rf.train.pred)
+colnames(lrrac.train.pred) = c("lasso","ridge", "rf")
+lrrac.mean.pred <- lrrac.train.pred %>%
+  group_by(rev.train$business_id) %>%
+  summarise(star.lasso = round(mean(lasso), digits = 1),
+            star.ridge = round(mean(ridge), digits = 1),
+            star.rf = round(mean(rf), digits = 1))
+colnames(lrrac.mean.pred) = c("business_id", "star.lasso", "star.ridge", "star.rf")
+
+lrrac.mean.pred.id <- lrrac.mean.pred[lrrac.mean.pred$business_id %in% bus.train$business_id,]
+lrrac.mean.pred.star <- lrrac.mean.pred.id[match(bus.train$business_id, lrrac.mean.pred.id$business_id),]
+
+lrrac.matrix <- cbind(lrrac.mean.pred.star[,-1], att.cat.train[,32:37])
+
+lrrac.test.pred <- cbind(lasso.test.pred, ridge.test.pred, rf.test.pred)
+colnames(lrrac.test.pred) = c("lasso", "ridge", "rf")
+lrrac.mean.pred.test <- lrrac.test.pred %>%
+  group_by(rev.test$business_id) %>%
+  summarise(star.lasso = round(mean(lasso), digits = 1),
+            star.ridge = round(mean(ridge), digits = 1),
+            star.rf = round(mean(rf), digits = 1))
+colnames(lrrac.mean.pred.test) = c("business_id", "star.lasso", "star.ridge", "star.rf")
+
+lrrac.mean.pred.id.test <- lrrac.mean.pred.test[lrrac.mean.pred.test$business_id %in% bus.test$business_id,]
+lrrac.mean.pred.star.test <- lrrac.mean.pred.id.test[match(bus.test$business_id, lrrac.mean.pred.id.test$business_id),]
+lrrac.pred <- cbind(lrrac.mean.pred.id.test[,-1], att.cat.test[,32:37])
+lrrac.cc.pred <- complete.cases(lrrac.pred)
+
+# svm
+star.lrrac.mat <- cbind(bus.train$stars, lrrac.matrix)
+lrrac.cc <- complete.cases(star.lrrac.mat)
+svm.fit.lrrac <- ksvm(as.matrix(star.lrrac.mat[lrrac.cc,2:10]), 
+                       as.matrix(star.lrrac.mat[lrrac.cc,1]), kernel='rbf',C=1, scale=F)
+
+lrrac.ypred <- predict(svm.fit.lrrac,lrrac.pred[lrrac.cc.pred,])
+lrfridge.svm <- data.frame(round(lrrac.ypred, digits = 1))
+
+write.csv(lrfridge.svm, "lrfridge.svm.csv", row.names=FALSE)
+
+# rf
+rf.mod <- randomForest(star.lrrac.mat[lrrac.cc,2:10], star.lrrac.mat[lrrac.cc,1], ntrees=1000)
+rf.pred <-predict(rf.mod, newdata=lrrac.pred[lrrac.cc.pred,])
+lrfridge.rf <- data.frame(round(rf.pred, digits = 1))
+
+write.csv(lrfridge.rf, "lrfridge.rf.csv", row.names=FALSE)
